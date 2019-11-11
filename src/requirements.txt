@@ -1,0 +1,4 @@
+xgboost=0.80
+numpy=1.16.2
+pandas=0.20.3
+bayesian-optimization>=1.0.0

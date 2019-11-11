@@ -1,0 +1,12 @@
+[site_info]
+site_name = site_01
+longitude = 117.0
+latitude = 40.0
+
+[model]
+forecast_start_hour = 0
+training_days = 300
+# 可传入多个数据源，以逗号分隔
+nwp_source = EC
+
+
