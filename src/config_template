@@ -1,7 +1,6 @@
 [site_info]
-site_name = site_01
-longitude = 117.0
-latitude = 40.0
+airport = ZBAA
+site_name = 18L
 
 [model]
 forecast_start_hour = 0

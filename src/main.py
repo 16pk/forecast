@@ -5,8 +5,9 @@ import configparser
 from sklearn.externals import joblib
 
 from src.forecast_task import ForecastTask, load_task, save_task
-from src.utils import load_nwp_data, load_obs_data
+from src.utils import load_nwp_data, load_obs_mat
 from src.utils import load_nwp_data_mock, load_obs_data_mock
+from src.apis import load_awos_by_point, load_ec_by_airport
 
 
 # 训练模型
@@ -20,9 +21,8 @@ def parse_config(config_file):
     config = configparser.ConfigParser()
     config.read(config_file, encoding='UTF-8')
     params = {}
+    params['airport'] = config['site_info'].get('airport')
     params['site_name'] = config['site_info'].get('site_name')
-    params['latitude'] = config['site_info'].getfloat('latitude')
-    params['longitude'] = config['site_info'].getfloat('longitude')
     params['training_days'] = config['model'].getint('training_days')
     params['start_hour'] = config['model'].getint('forecast_start_hour')
     params['nwp_sources'] = config['model'].get('nwp_source').split(',')
@@ -32,7 +32,7 @@ def parse_config(config_file):
 def load_data(fcst_start_time, n_days, config):
     nwp_data_list = [load_nwp_data(nwp, fcst_start_time, n_days, config['latitude'], config['longitude']) for nwp in
                      config['nwp_sources']]
-    obs_data = load_obs_data(config['site_name'], fcst_start_time - timedelta(days=1), n_days + 1)
+    obs_data = load_obs_mat(config['site_name'], fcst_start_time - timedelta(days=1), n_days + 1)
     return nwp_data_list, obs_data
 
 
@@ -70,6 +70,7 @@ def prediction_mock(task_obj):
     fcst_result = task_obj.predict(nwp_data_list, obs_data)
     return fcst_result, obs_data, nwp_data_list[0][[f'EC.ws.{x}' for x in range(24)]]
 
+
 if __name__ == '__main__':
     fcst_config = parse_config('config_template')
     # model_training(fcst_config)
@@ -81,9 +82,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('stage', choices=('train', 'predict'))
     parser.add_argument('--config')
+    parser.add_argument('--airport')
     parser.add_argument('--site')
+    parser.add_argument('--train_start_time', help='format: "%Y%m%d%H%M%S')
+    parser.add_argument('--train_end_time', help='format: "%Y%m%d%H%M%S')
+    parser.add_argument('--train_days', type=int, help='Invalidated if train_end_time is set')
     parser.add_argument('--forecast_time')
     args = parser.parse_args()
+    assert args.airport is not None and args.site is not None, 'Airport and site name are needed!'
     if args.stage == 'train':
         assert args.config is not None, 'Please input config file when training!'
         fcst_config = parse_config(args.config)
