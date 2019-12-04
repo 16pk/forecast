@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 import xgboost as xgb
+from src.model_opt import get_best_params_by_bo
 
 
 def save_task(task_obj):
@@ -44,17 +45,18 @@ class ForecastTask(object):
         for nwp in self.nwp_sources:
             # 风速，湿球温度与气温差值，预报风速误差
             for idx in range(-12, 24):
-                datamat[f'{nwp}.ws.{idx}'] = np.sqrt(
-                    datamat[f'{nwp}.U10.{idx}'] ** 2 + datamat[f'{nwp}.V10.{idx}'] ** 2)
-                datamat[f'{nwp}.rh_delta.{idx}'] = datamat[f'{nwp}.T.{idx}'] - datamat[f'{nwp}.RH.{idx}']
-                datamat[f'{nwp}.bias.{idx}'] = datamat[f'obs.{idx}'] - datamat[f'{nwp}.ws.{idx}']
+                # datamat[f'{nwp}.SPD10.{idx}'] = np.sqrt(
+                #     datamat[f'{nwp}.U10.{idx}'] ** 2 + datamat[f'{nwp}.V10.{idx}'] ** 2)
+                datamat[f'{nwp}.rh_delta.{idx}'] = datamat[f'{nwp}.T2.{idx}'] - datamat[f'{nwp}.TD2.{idx}']
+                datamat[f'{nwp}.bias.{idx}'] = datamat[f'obs_ws.{idx}'] - datamat[f'{nwp}.SPD10.{idx}']
             # 气压变，温度变，风速变
             for idx in range(0, 24):
                 for span in (1, 3, 6, 12):
                     datamat[f'{nwp}.PSFC_{span}d.{idx}'] = datamat[f'{nwp}.PSFC.{idx}'] - datamat[
                         f'{nwp}.PSFC.{idx-span}']
-                    datamat[f'{nwp}.T_{span}d.{idx}'] = datamat[f'{nwp}.T.{idx}'] - datamat[f'{nwp}.T.{idx-span}']
-                    datamat[f'{nwp}.ws_{span}d.{idx}'] = datamat[f'{nwp}.ws.{idx}'] - datamat[f'{nwp}.ws.{idx-span}']
+                    datamat[f'{nwp}.T2_{span}d.{idx}'] = datamat[f'{nwp}.T2.{idx}'] - datamat[f'{nwp}.T2.{idx-span}']
+                    datamat[f'{nwp}.SPD10_{span}d.{idx}'] = datamat[f'{nwp}.SPD10.{idx}'] - datamat[
+                        f'{nwp}.SPD10.{idx-span}']
         return datamat
 
     def _get_feature_list(self, fc_hr):
@@ -62,11 +64,11 @@ class ForecastTask(object):
         for nwp in self.nwp_sources:
             feat_list += [f'{nwp}.U10.{x}' for x in range(-12, 24)] \
                          + [f'{nwp}.V10.{x}' for x in range(-12, 24)] \
-                         + [f'{nwp}.ws.{x}' for x in range(-12, 24)] \
+                         + [f'{nwp}.SPD10.{x}' for x in range(-12, 24)] \
                          + [f'{nwp}.rh_delta.{x}' for x in range(-12, 24)] \
                          + [f'{nwp}.PSFC_{span}d.{fc_hr}' for span in (1, 3, 6, 12)] \
                          + [f'{nwp}.T_{span}d.{fc_hr}' for span in (1, 3, 6, 12)] \
-                         + [f'{nwp}.ws_{span}d.{fc_hr}' for span in (1, 3, 6, 12)]
+                         + [f'{nwp}.WPD10_{span}d.{fc_hr}' for span in (1, 3, 6, 12)]
         return feat_list
 
     def train(self, nwp_data_list, obs, n_val_day=20):
@@ -94,28 +96,9 @@ class ForecastTask(object):
             feat_list = self._get_feature_list(fc_hr)
             y_tag = f'{self.nwp_sources[0]}.bias.{fc_hr}'
             x_train, y_train, x_val, y_val = _train_val_split(datamat, n_val_day, feat_list, y_tag)
-            clf = xgb.XGBRegressor(
-                booster='dart',
-                learning_rate=0.03,
-                n_estimators=300,
-                subsample=0.3,
-                colsample_bytree=0.35,
-                max_depth=3,
-                seed=42)
-            clf.fit(x_train, y_train,
-                    eval_set=[(x_val, y_val)],
-                    eval_metric='rmse', verbose=0,
-                    early_stopping_rounds=40)
-            best_iter = clf.best_iteration
-            print(f'Best iteration is: {best_iter}')
-            clf = xgb.XGBRegressor(
-                booster='dart',
-                learning_rate=0.037,
-                n_estimators=best_iter,
-                subsample=0.3,
-                colsample_bytree=0.35,
-                max_depth=3,
-                seed=42)
+            best_params = get_best_params_by_bo(x_train, y_train, x_val, y_val)
+            clf = xgb.XGBRegressor(booster='gbtree', n_estimators=300, verbosity=0, n_jobs=16, seed=42,
+                                   reg_alpha=0.1, reg_lambda=0.1, **best_params)
             clf.fit(pd.concat([x_train, x_val]), pd.concat([y_train, y_val]))
             self.models[fc_hr] = clf
 

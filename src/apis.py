@@ -47,7 +47,7 @@ def load_ec_by_airport(start_time, end_time=None, days=None, start_point=0):
     df_lst = []
     for meteo in meteo_list:
         meta_df = pd.DataFrame({x: data_json[x][meteo] for x in data_json}, dtype=float).transpose()
-        meta_df.columns = [f'ec.{meteo}.{x-start_point}' for x in meta_df.columns]
+        meta_df.columns = [f'{meteo}.{x-start_point}' for x in meta_df.columns]
         df_lst.append(meta_df)
     final_df = pd.concat(df_lst, axis=1)
     final_df.index = pd.to_datetime(final_df.index, format='%Y%m%d%H%M%S') + timedelta(hours=start_point)
@@ -55,7 +55,7 @@ def load_ec_by_airport(start_time, end_time=None, days=None, start_point=0):
 
 
 def _str2num(list_obj):
-    return [float(x) if x != 'null' else np.nan for x in list_obj]
+    return [float(x) if x not in ('null', ' ') else np.nan for x in list_obj]
 
 
 @retry(tries=5, delay=10, backoff=2)

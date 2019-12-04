@@ -93,6 +93,6 @@ def load_obs_data_mock(filename):
 
 
 if __name__ == '__main__':
-    # df_obs = load_obs_mat(airport='ZBAA', point='18L', start_time=datetime(2019, 8, 20), days=6)
-    df_ec = load_nwp_data(start_time=datetime(2019, 8, 20), days=6)
+    df_obs = load_obs_mat(airport='ZBAA', point='18L', start_time=datetime(2019, 4, 1), days=50)
+    # df_ec = load_nwp_data(start_time=datetime(2019, 8, 20), days=6)
     pass
