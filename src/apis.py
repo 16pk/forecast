@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-@author: liuhongjian
-@contact: liuhongjian@duxiaoman.com
-@created time: 2019-11-24
-"""
 import requests
 from datetime import datetime, timedelta
 import numpy as np

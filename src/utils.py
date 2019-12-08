@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-@author: liuhongjian
-@contact: liuhongjian@duxiaoman.com
-@created time: 2019-11-10
-"""
 import pandas as pd
 from datetime import datetime, timedelta
 from collections import defaultdict
-from src.apis import load_awos_by_point, load_ec_by_airport
+from apis import load_awos_by_point, load_ec_by_airport
 
 NWP_DELAY_HOUR = {
     'EC': 6
@@ -79,6 +74,7 @@ def load_obs_mat(airport, point, start_time, days):
     return pd.concat([obs_ws_mat, obs_wd_mat], axis=1)
 
 
+"""
 def load_obs_data_mock(filename):
     obs_data = pd.read_csv(filename, header=None, names=['time', 'obs'], sep='\t')
     obs_data['date'] = pd.to_datetime(obs_data['time'] // 10000, format='%Y%m%d')
@@ -90,7 +86,7 @@ def load_obs_data_mock(filename):
     obs_mat = pd.concat([yesterday_obs, obs_data], axis=1)
     obs_mat.columns = [f'obs.{x}' for x in obs_mat.columns]
     return obs_mat
-
+"""
 
 if __name__ == '__main__':
     df_obs = load_obs_mat(airport='ZBAA', point='18L', start_time=datetime(2019, 4, 1), days=50)

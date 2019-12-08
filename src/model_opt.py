@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-@author: liuhongjian
-@contact: liuhongjian@duxiaoman.com
-@created time: 2019-11-25
-"""
-import numpy as np
 import warnings
+import numpy as np
 import xgboost as xgb
 from bayes_opt import BayesianOptimization
 
 
 def get_best_params_by_bo(x_train, y_train, x_val, y_val):
+    """在给定的参数范围内使用贝叶斯方案寻找最优参数"""
+
     def _xgb_model(**kwargs):
         xgb_params = bo_result_to_xgb(kwargs)
         clf = xgb.XGBRegressor(booster='gbtree', n_estimators=300, verbosity=0, n_jobs=16, seed=42,
@@ -55,11 +52,3 @@ def bo_result_to_xgb(bo_res):
     if 'colsample_bytree' in xgb_params:
         xgb_params['colsample_bytree'] = max(min(xgb_params['colsample_bytree'], 1), 0)
     return xgb_params
-
-
-def bayesian_opt(clf, params_range, train_set, eval_set):
-    pass
-
-
-if __name__ == '__main__':
-    pass
