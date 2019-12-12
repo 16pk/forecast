@@ -11,12 +11,26 @@ HOST = 'http://161.189.11.216:8090'
 def load_awos_by_point(airport, site_name, start_time, end_time=None, days=None):
     if end_time is None:
         end_time = start_time + timedelta(days=days)
-    params = {'datacode': 'uu',
-              'airport': airport,
-              'runwayName': site_name,
-              'dataset': 'WS10X,WD10X',
-              'starttime': start_time.strftime('%Y-%m-%d %H:%M:%S'),
-              'endtime': end_time.strftime('%Y-%m-%d %H:%M:%S')}
+    params = {'site': site_name,
+              'dataSet': 'SPD10,DIR10',
+              'startTime': start_time.strftime('%Y-%m-%d %H:%M:%S'),
+              'endTime': end_time.strftime('%Y-%m-%d %H:%M:%S')}
+    url = f'{HOST}/gis/getAWOSVARData'
+    data_json = get_json(url, params)
+    ws = _str2num(data_json['data']['SPD10'])
+    wd = _str2num(data_json['data']['DIR10'])
+    time_idx = pd.date_range(start_time, end_time - timedelta(minutes=1), freq=timedelta(hours=1))
+    return pd.DataFrame({'obs_ws': ws, 'obs_wd': wd}, index=time_idx)
+
+
+def load_awos_by_point_deprecated(airport, site_name, start_time, end_time=None, days=None):
+    if end_time is None:
+        end_time = start_time + timedelta(days=days)
+    params = {
+        'runwayName': site_name,
+        'dataset': 'WS10X,WD10X',
+        'starttime': start_time.strftime('%Y-%m-%d %H:%M:%S'),
+        'endtime': end_time.strftime('%Y-%m-%d %H:%M:%S')}
     url = f'{HOST}/gis/BJPEK/RunwaysHistoryByRunwayName'
     data_json = get_json(url, params)
     ws = _str2num(data_json['runwayName'][0][site_name]['WS10X'][::60])
@@ -50,7 +64,8 @@ def load_ec_by_airport(start_time, end_time=None, days=None, start_point=0):
 
 
 def _str2num(list_obj):
-    return [float(x) if x not in ('null', ' ') else np.nan for x in list_obj]
+    meta = [float(x) if x not in ('null', ' ',) else np.nan for x in list_obj]
+    return [x if x > -1000 else np.nan for x in meta]
 
 
 @retry(tries=5, delay=10, backoff=2)
@@ -62,6 +77,6 @@ def get_json(url, params):
 
 if __name__ == '__main__':
     df = load_awos_by_point(airport='ZBAA', site_name='18L', start_time=datetime(2019, 9, 20), days=3)
-    ec_df = load_ec_by_airport(datetime(2019, 9, 20), days=3)
+    # ec_df = load_ec_by_airport(datetime(2019, 9, 20), days=3)
     print(df.shape)
     print(df.head())

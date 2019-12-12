@@ -2,7 +2,7 @@
 """
 预报任务的实现，任务对象的序列化与反序列化
 """
-from sklearn.externals import joblib
+import joblib
 import pandas as pd
 from datetime import datetime, timedelta
 import xgboost as xgb
