@@ -19,8 +19,8 @@ def load_awos_by_point(airport, site_name, start_time, end_time=None, days=None)
     data_json = get_json(url, params)
     ws = _str2num(data_json['data']['SPD10'])
     wd = _str2num(data_json['data']['DIR10'])
-    time_idx = pd.date_range(start_time, end_time - timedelta(minutes=1), freq=timedelta(hours=1))
-    return pd.DataFrame({'obs_ws': ws, 'obs_wd': wd}, index=time_idx)
+    time_idx = pd.date_range(start_time, end_time, freq=timedelta(hours=1))
+    return pd.DataFrame({'obs_ws': ws, 'obs_wd': wd}, index=time_idx).iloc[:-1].copy()
 
 
 def load_awos_by_point_deprecated(airport, site_name, start_time, end_time=None, days=None):
