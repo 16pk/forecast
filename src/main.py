@@ -21,11 +21,11 @@ def load_data(start_time, n_days, config):
     return nwp_data_list, obs_data
 
 
-def model_training(train_start_time, train_days, fcst_config):
+def model_training(train_start_time, train_days, fcst_config, prefix='./'):
     nwp_data_list, obs_data = load_data(train_start_time, train_days, fcst_config)
     task_obj = ForecastTask(fcst_config)
     task_obj.train(nwp_data_list, obs_data)
-    save_task(task_obj)
+    save_task(task_obj, prefix)
 
 
 def prediction(task_obj, forecast_start_time, forecast_days=1):
@@ -33,9 +33,14 @@ def prediction(task_obj, forecast_start_time, forecast_days=1):
     nwp_data_list, obs_data = load_data(forecast_start_time, forecast_days, fcst_config)
     fcst_result_arr = task_obj.predict(nwp_data_list, obs_data)
     fcst_result_str = json.dumps(list(fcst_result_arr))
-    result_file = f'ws_forecast_{task_obj.airport}_{task_obj.site_name}_{forecast_start_time.strftime("%Y%m%d")}_{forecast_days}.json'
+
+    nwp_str = '_'.join(task_obj.nwp_sources)
+    start_time_str = forecast_start_time.strftime('%Y%m%d%H%M')
+    end_time_str = (forecast_start_time + timedelta(days=forecast_days) - timedelta(hours=1)).strftime('%Y%m%d%H%M')
+    result_file = f'{nwp_str}_AI_{task_obj.airport}_{task_obj.site_name}_0010m_SPD_{start_time_str}_{end_time_str}_3000M_NWP02.dat'
     with open(result_file, 'w') as fid:
-        fid.write(fcst_result_str)
+        for x in fcst_result_arr:
+            fid.write(f'{x:.3f}\n')
     return fcst_result_arr
 
 
@@ -50,6 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('--nwp_sources', default='EC')
     parser.add_argument('--forecast_start_time', help='format: "%Y%m%d%H%M%S')
     parser.add_argument('--forecast_days', type=int, default=1)
+    parser.add_argument('--prefix', default='./')
     args = parser.parse_args()
     assert args.airport is not None and args.site is not None, 'Airport and site name are needed!'
     if args.stage == 'train':
@@ -66,9 +72,9 @@ if __name__ == '__main__':
                        'site_name': args.site,
                        'start_hour': train_start_time.hour,
                        'nwp_sources': nwp_sources}
-        model_training(train_start_time, train_days, fcst_config)
+        model_training(train_start_time, train_days, fcst_config, args.prefix)
     elif args.stage == 'predict':
         forecast_time = datetime.strptime(args.forecast_start_time, '%Y%m%d%H%M%S')
         forecast_days = args.forecast_days
-        task_obj = load_task(args.airport, args.site, forecast_time.hour)
+        task_obj = load_task(args.airport, args.site, forecast_time.hour, args.prefix)
         prediction(task_obj, forecast_time, forecast_days)

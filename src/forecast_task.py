@@ -116,7 +116,7 @@ class ForecastTask(object):
             pred_one.loc[pred_one < 0.52] = 0.52
             pred_list.append(pred_one)
         result = pd.concat(pred_list).sort_index()
-        result = result.loc[result.notna()]
+        result = result.loc[result.notnull()]
         result.loc[result<0.52] = 0.52
         return result
 
