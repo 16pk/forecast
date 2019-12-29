@@ -115,7 +115,10 @@ class ForecastTask(object):
             pred_one.index = pred_one.index + timedelta(hours=fc_hr)
             pred_one.loc[pred_one < 0.52] = 0.52
             pred_list.append(pred_one)
-        return pd.concat(pred_list).sort_index()
+        result = pd.concat(pred_list).sort_index()
+        result = result.loc[result.notna()]
+        result.loc[result<0.52] = 0.52
+        return result
 
 
 if __name__ == '__main__':

@@ -9,6 +9,7 @@ Usage:
 """
 from datetime import datetime, timedelta
 import argparse
+import json
 
 from forecast_task import ForecastTask, load_task, save_task
 from utils import load_nwp_data, load_obs_mat
@@ -31,6 +32,10 @@ def prediction(task_obj, forecast_start_time, forecast_days=1):
     fcst_config = task_obj.get_config()
     nwp_data_list, obs_data = load_data(forecast_start_time, forecast_days, fcst_config)
     fcst_result_arr = task_obj.predict(nwp_data_list, obs_data)
+    fcst_result_str = json.dumps(list(fcst_result_arr))
+    result_file = f'ws_forecast_{task_obj.airport}_{task_obj.site_name}_{forecast_start_time.strftime("%Y%m%d")}_{forecast_days}.json'
+    with open(result_file, 'w') as fid:
+        fid.write(fcst_result_str)
     return fcst_result_arr
 
 
@@ -63,7 +68,7 @@ if __name__ == '__main__':
                        'nwp_sources': nwp_sources}
         model_training(train_start_time, train_days, fcst_config)
     elif args.stage == 'predict':
-        forecast_time = datetime.strptime(args.forecast_start_time, format='%Y%m%d%H%M%S')
+        forecast_time = datetime.strptime(args.forecast_start_time, '%Y%m%d%H%M%S')
         forecast_days = args.forecast_days
-        task_obj = load_task(args.site, forecast_time.hour)
+        task_obj = load_task(args.airport, args.site, forecast_time.hour)
         prediction(task_obj, forecast_time, forecast_days)
