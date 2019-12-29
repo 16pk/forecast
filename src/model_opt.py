@@ -31,7 +31,7 @@ def get_best_params_by_bo(x_train, y_train, x_val, y_val):
     xgb_bayes = BayesianOptimization(_xgb_model, search_space)
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore')
-        xgb_bayes.maximize(init_points=15, n_iter=25)
+        xgb_bayes.maximize(init_points=15, n_iter=2)
     best_params = xgb_bayes.max['params']
     xgb_params = bo_result_to_xgb(best_params)
     return xgb_params

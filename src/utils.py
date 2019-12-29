@@ -2,22 +2,26 @@
 import pandas as pd
 from datetime import datetime, timedelta
 from collections import defaultdict
-from apis import load_awos_by_point, load_ec_by_airport
+from apis import load_awos_by_point, load_ec_by_airport, load_wrf_by_airport
 
 NWP_DELAY_HOUR = {
-    'EC': 6
+    'EC': 6,
+    'WRFVAR': 6
 }
 
 NWP_START_HOUR = {
-    'EC': 0
+    'EC': 0,
+    'WRFVAR': 12
 }
 
 NWP_FREQ = {
-    'EC': 12
+    'EC': 12,
+    'WRFVAR': 24
 }
 
 NWP_FCST_LENGTH = {
-    'EC': 36
+    'EC': 36,
+    'WRFVAR': 36
 }
 
 
@@ -29,29 +33,17 @@ def get_nwp_start_time(nwp_type, forecast_time: datetime):
     return forecast_time - timedelta(hours=point_hour + NWP_DELAY_HOUR[nwp_type] - possible_hour)
 
 
-def load_nwp_data(start_time: datetime, end_time=None, days=None):
+def load_nwp_data(nwp_type, point, start_time: datetime, end_time=None, days=None):
     """请求指定时间范围内的NWP预报，预报字段包括U10, V10, SPD10, DIR10, T2, TD2, PSFC"""
-    nwp_type = 'EC'
     last_nwp_time = get_nwp_start_time(nwp_type, start_time)
     hour_span = (start_time - last_nwp_time).seconds // 3600 + (start_time - last_nwp_time).days * 24
     if end_time is not None:
         days = (end_time - start_time).days
-    ec_df = load_ec_by_airport(last_nwp_time, days=days, start_point=hour_span)
-    return ec_df
-
-
-def load_nwp_data_mock(filename):
-    with open(filename) as fid:
-        data_dct = defaultdict(dict)
-        for line in fid:
-            fields = line.strip('\n').split('\t')
-            if fields[1] == 'SLP':
-                continue
-            ec_time = datetime.strptime(fields[0], '%Y%m%d%H')
-            forecast_time = (ec_time + timedelta(hours=12))
-            for idx in range(-12, 24):
-                data_dct[forecast_time][f'{fields[1]}.{idx}'] = float(fields[idx + 12 + 2])
-    return [pd.DataFrame(data_dct).transpose()]
+    if nwp_type == 'EC':
+        nwp_df = load_ec_by_airport(site_name=point, start_time=last_nwp_time, days=days, start_point=hour_span)
+    elif nwp_type == 'WRFVAR':
+        nwp_df = load_wrf_by_airport(site_name=point, start_time=last_nwp_time, days=days, start_point=hour_span)
+    return nwp_df
 
 
 def pivot_arr_by_date(arr, tag):
@@ -74,21 +66,7 @@ def load_obs_mat(airport, point, start_time, days):
     return pd.concat([obs_ws_mat, obs_wd_mat], axis=1)
 
 
-"""
-def load_obs_data_mock(filename):
-    obs_data = pd.read_csv(filename, header=None, names=['time', 'obs'], sep='\t')
-    obs_data['date'] = pd.to_datetime(obs_data['time'] // 10000, format='%Y%m%d')
-    obs_data['hour'] = obs_data['time'] // 100 % 100
-    obs_data = obs_data.pivot(columns='hour', index='date', values='obs')
-    yesterday_obs = obs_data.copy()
-    yesterday_obs.index = yesterday_obs.index + timedelta(days=1)
-    yesterday_obs.columns = [x - 24 for x in yesterday_obs.columns]
-    obs_mat = pd.concat([yesterday_obs, obs_data], axis=1)
-    obs_mat.columns = [f'obs.{x}' for x in obs_mat.columns]
-    return obs_mat
-"""
-
 if __name__ == '__main__':
-    df_obs = load_obs_mat(airport='ZBAA', point='18L', start_time=datetime(2019, 4, 1), days=50)
-    # df_ec = load_nwp_data(start_time=datetime(2019, 8, 20), days=6)
+    df_obs = load_obs_mat(airport='ZBAA', point='18L', start_time=datetime(2019, 4, 3), days=1)
+    df_wrf = load_nwp_data('WRFVAR', point='18L', start_time=datetime(2019, 4, 20), days=6)
     pass
