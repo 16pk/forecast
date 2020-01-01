@@ -113,7 +113,6 @@ class ForecastTask(object):
             yhat = pd.Series(yhat, index=datamat.index)
             pred_one = yhat + datamat[f'{self.nwp_sources[0]}.SPD10.{fc_hr}']
             pred_one.index = pred_one.index + timedelta(hours=fc_hr)
-            pred_one.loc[pred_one < 0.52] = 0.52
             pred_list.append(pred_one)
         result = pd.concat(pred_list).sort_index()
         result = result.loc[result.notnull()]
