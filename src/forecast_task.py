@@ -101,6 +101,11 @@ class ForecastTask(object):
             best_params = get_best_params_by_bo(x_train, y_train, x_val, y_val)
             clf = xgb.XGBRegressor(booster='gbtree', n_estimators=300, verbosity=0, n_jobs=16, seed=42,
                                    reg_alpha=0.1, reg_lambda=0.1, **best_params)
+            clf.fit(
+                x_train, y_train, eval_set=[(x_val, y_val)], eval_metric='rmse', early_stopping_rounds=20, verbose=0)
+            best_n = clf.best_iteration
+            clf = xgb.XGBRegressor(booster='gbtree', n_estimators=best_n, verbosity=0, n_jobs=16, seed=42,
+                                   reg_alpha=0.1, reg_lambda=0.1, **best_params)
             clf.fit(pd.concat([x_train, x_val]), pd.concat([y_train, y_val]))
             self.models[fc_hr] = clf
 
@@ -116,7 +121,7 @@ class ForecastTask(object):
             pred_list.append(pred_one)
         result = pd.concat(pred_list).sort_index()
         result = result.loc[result.notnull()]
-        result.loc[result<0.52] = 0.52
+        result.loc[result < 0.52] = 0.52
         return result
 
 

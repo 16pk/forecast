@@ -3,9 +3,20 @@
 Usage:
 
 使用制定时段的数据训练模型
-    python main.py train --airport ZBAA --site 18L --train_start_time 20180901000000 --train_end_time 20181015000000
+    python main.py train
+        --airport ZBAA
+        --site 18L
+        --train_start_time 20180901000000
+        --train_end_time 20181015000000
+        --nwp_sources EC
+        --prefix ec_
 使用当前时间前若干天的数据训练模型
-    python main.py train --airport ZBAA --site 18L --train_days 400
+    python main.py train
+        --airport ZBAA
+        --site 18L
+        --train_days 400
+        --nwp_sources EC
+        --prefix ec_
 """
 from datetime import datetime, timedelta
 import argparse
@@ -17,7 +28,8 @@ from utils import load_nwp_data, load_obs_mat
 
 def load_data(start_time, n_days, config):
     nwp_data_list = [load_nwp_data(nwp, config['site_name'], start_time, days=n_days) for nwp in config['nwp_sources']]
-    obs_data = load_obs_mat(config['airport'], config['site_name'], start_time, n_days)
+    obs_data = load_obs_mat(config['airport'], config['site_name'], start_time - timedelta(days=1), n_days)
+    obs_data = obs_data.loc[nwp_data_list[0].index]
     return nwp_data_list, obs_data
 
 
@@ -32,7 +44,6 @@ def prediction(task_obj, forecast_start_time, forecast_days=1):
     fcst_config = task_obj.get_config()
     nwp_data_list, obs_data = load_data(forecast_start_time, forecast_days, fcst_config)
     fcst_result_arr = task_obj.predict(nwp_data_list, obs_data)
-    fcst_result_str = json.dumps(list(fcst_result_arr))
 
     nwp_str = '_'.join(task_obj.nwp_sources)
     start_time_str = forecast_start_time.strftime('%Y%m%d%H%M')
